@@ -20,29 +20,49 @@ def rayCast(originX, originY, directionX, directionY, maxDist, mapArr):
     dirVecDist = sqrt(directionX ** 2 + directionY ** 2)
     originX /= ratioSize
     originY /= ratioSize
-    normalizedDirectionX = directionX / dirVecDist
-    normalizedDirectionY = directionY / dirVecDist
-    checkX = int(originX)
-    checkY = int(originY)
-    distX = ceil(originX) - originX
-    distY = ceil(originY) - originY
+    normDirX = directionX / dirVecDist
+    normDirY = directionY / dirVecDist
+    checkX = floor(originX)
+    checkY = floor(originY)
+    deltaX = (1 / 1e30) if normDirX == 0 else abs(1 / normDirX)
+    deltaY = (1 / 1e30) if normDirY == 0 else abs(1 / normDirY)
+    side = 0
+    if normDirX > 0:
+        stepX = 1
+        distX = (1.0 - (originX - floor(originX))) * deltaX
+    else:
+        stepX = -1
+        distX = (originX - floor(originX)) * deltaX
+    if normDirY > 0:
+        distY = (1.0 - (originY - floor(originY))) * deltaY
+        stepY = 1
+    else:
+        distY = (originY - floor(originY)) * deltaY
+        stepY = -1
     wallFound = False
     while not wallFound:
-        while distX >= distY:
-            distY += ceil(originX + distX) - (originX + distX)
-            checkY += 1
-            if checkY >= 0 and checkY < len(mapArr) and mapArr[checkY][checkX] == 1:  
-                wallFound = True
-                dist = sqrt(distX ** 2 + distY ** 2)
-                return dist
-        while distY > distX:
-            distX += ceil(originX + distX) - (originX + distX)
-            checkX += 1
+        if distX < distY:
+            distX += deltaX
+            checkX += stepX
+            side = 0
+            pygame.draw.rect(screen, (255, 255, 100), (checkX * ratioSize, checkY * ratioSize, ratioSize, ratioSize))
             if checkX >= 0 and checkX < len(mapArr) and mapArr[checkY][checkX] == 1:
                 wallFound = True
-                dist = sqrt(distX ** 2 + distY ** 2)
-                return dist
-            
+                dist = distX - deltaX
+                pygame.draw.rect(screen, (0, 255, 0), (checkX * ratioSize, checkY * ratioSize, ratioSize, ratioSize))
+                return dist, side
+        else:
+            distY += deltaY
+            checkY += stepY
+            side = 1
+            pygame.draw.rect(screen, (255, 255, 100), (checkX * ratioSize, checkY * ratioSize, ratioSize, ratioSize))
+            if checkY >= 0 and checkY < len(mapArr) and mapArr[checkY][checkX] == 1:
+                wallFound = True
+                dist = distY - deltaY
+                pygame.draw.rect(screen, (0, 255, 0), (checkX * ratioSize, checkY * ratioSize, ratioSize, ratioSize))
+                return dist, side
+
+
 
 
 while running:
@@ -64,23 +84,21 @@ while running:
         x -= speed * dt
     elif keyDown == 100:
         x += speed * dt
-    screen.fill("white")
+    screen.fill((255, 255, 255))
     for i in range(len(mapArr)):
         for j in range(len(mapArr[i])):
-            pygame.draw.line(screen, "black", (j * ratioSize, 0), (j * ratioSize, 512))
-            pygame.draw.line(screen, "black", (0, i * ratioSize), (512, i * ratioSize))
+            pygame.draw.line(screen, (0, 0, 0), (j * ratioSize, 0), (j * ratioSize, 512))
+            pygame.draw.line(screen, (0, 0, 0), (0, i * ratioSize), (512, i * ratioSize))
             if mapArr[i][j] == 1:
-                pygame.draw.rect(screen, "black", (j * ratioSize, i * ratioSize, ratioSize, ratioSize))        
-    pygame.draw.line(screen, "yellow", (x, y), (pygame.mouse.get_pos()))
+                pygame.draw.rect(screen, (0, 0, 0), (j * ratioSize, i * ratioSize, ratioSize, ratioSize))
+    pygame.draw.line(screen, (255, 255, 0), (x, y), (pygame.mouse.get_pos()))
     dirX, dirY = pygame.mouse.get_pos()[0] - x, pygame.mouse.get_pos()[1] - y
-    dist = rayCast(x, y, dirX, dirY, 20, mapArr)
+    dist, side = rayCast(x, y, dirX, dirY, 20, mapArr)
     dirVecDist = sqrt(dirX ** 2 + dirY ** 2)
-
     dirX = dirX / dirVecDist
     dirY = dirY / dirVecDist
-    print(dist)
-    pygame.draw.line(screen, "red", (x, y), (x + dist * dirX, y + dist * dirY))
-    
-    pygame.draw.circle(screen, "black", (x,y), 15) 
+    pygame.draw.line(screen, (255, 0, 0), (x, y), (x + dist * dirX * ratioSize, y + dist * dirY * ratioSize))
+    pygame.draw.circle(screen, (0, 0, 0), (int(x),int(y)), 15)
+    pygame.draw.circle(screen, (255, 0, 0), (x + dist * dirX * ratioSize, y + dist * dirY * ratioSize), 5)
     pygame.display.flip()
     clock.tick()
